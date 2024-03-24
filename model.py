@@ -52,7 +52,10 @@ class ConvNet(nn.Module):
         return self.net(x)
 
 
-def sharp_loss(weights, prices, idx):
+prices = []  # temporary placeholder
+
+
+def sharp_loss(weights, idx, prices=prices):
     """
     Compute the sharp ratio loss
     Args:
@@ -70,3 +73,30 @@ def sharp_loss(weights, prices, idx):
         sharp_ratio = np.mean(portfolio_returns) / np.std(portfolio_returns)
         loss += -sharp_ratio
     return loss / batch_size
+
+
+def train(train_loader, val_loader, model, num_epochs, lr=1e-1, print_freq=100):
+    """
+    Model training loop
+    """
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+
+    for epoch in range(num_epochs):
+        model.train()
+        for batch_idx, (x, y) in enumerate(train_loader):
+            optimizer.zero_grad()
+            weights = model(x)
+            loss = sharp_loss(weights, y)
+            loss.backward()
+            optimizer.step()
+            if (batch_idx + 1) % print_freq == 0:
+                print(f'epcho {epoch} loss {loss.item()}')
+
+        model.eval()
+        with torch.no_grad():
+            for batch_idx, (x, y) in enumerate(val_loader):
+                weights = model(x)
+                loss = sharp_loss(weights, y)
+                print(f'epcho {epoch} test loss {loss.item()}')
+        return model
