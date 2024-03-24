@@ -60,15 +60,14 @@ def sharp_loss(weights, idx, prices=prices):
     Compute the sharp ratio loss
     Args:
         weights: (batch_size, num_assets). weights of the portfolio
-        prices: (num_assets, time_horizion). historical prices of all assets
+        prices: (num_assets, loopback_window). historical prices of all assets
         idx: an array of size batch_size. Every element is a tuple (start_idx, end_idx). For example, for weights w_t, the corresponding time period is (t - 50, t - 1).
     """
     batch_size = weights.shape[0]
     loss = 0
     for i in range(batch_size):
         start_idx, end_idx = idx[i]
-        returns = prices[:, start_idx:end_idx].T
-        portfolio_values = np.sum(returns * weights[i], axis=1)
+        portfolio_values = prices[:, start_idx:end_idx].T @ weights[i]
         portfolio_returns = portfolio_values[1:] / portfolio_values[:-1] - 1
         sharp_ratio = np.mean(portfolio_returns) / np.std(portfolio_returns)
         loss += -sharp_ratio
