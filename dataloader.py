@@ -103,4 +103,4 @@ val_loader = DataLoader(val_dataset, batch_size=32,
 
 
 if __name__ == '__main__':
-    print(train_dataset[0][1])
+    print(data_val)

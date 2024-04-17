@@ -4,6 +4,7 @@ from dataloader import train_loader, val_loader
 from model import ConvNet
 import logging
 import tqdm
+from hyperparams import num_epochs, lr, print_freq, input_channels, hidden_channels
 
 logging.basicConfig(format="%(asctime)s-%(message)s",
                     level=logging.INFO, datefmt="%H:%M:%S")
@@ -37,13 +38,13 @@ def train(
         model.eval()
         with torch.no_grad():
             for batch_idx, (x, y) in enumerate(val_loader):
-                logging.info(f"Validating batch {batch_idx}")
                 weights = model(x)
                 loss = sharp_loss(weights, y)
+            if (batch_idx + 1) % print_freq == 0:
                 print(f'epcho {epoch} test loss {loss.item()}')
-        return model
+    return model
 
 
-model = ConvNet(input_channels=50, hidden_channels=16, output_dim=4)
+model = ConvNet(input_channels, hidden_channels, output_dim=4)
 
-train(train_loader, val_loader, model, num_epochs=50, lr=1e-2, print_freq=30)
+train(train_loader, val_loader, model, num_epochs, lr, print_freq)

@@ -69,4 +69,4 @@ def sharp_loss(weights, prices):
     v = torch.tensor(v).float()
     returns = v[1:] / v[:-1] - 1
     loss = torch.mean(returns) / torch.std(returns)
-    return loss
+    return -loss
