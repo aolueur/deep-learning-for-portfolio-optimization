@@ -1,122 +1,82 @@
 import torch
+import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-import pandas as pd
 import numpy as np
+import pandas as pd
+import yfinance as yf
 import matplotlib.pyplot as plt
+from torchvision.transforms import Compose
+
+
+#placeholder
+class IdentityTransform(nn.Module):
+    def __init__(self):
+        super(IdentityTransform, self).__init__()
+
+    def forward(self, x):
+        return x
+
 
 class PortfolioDataset(Dataset):
-    def __init__(self, data, lookback_window=50):
+    def __init__(self, data, lookback_window=50, num_assets=4, num_features=2, transform=None):
+        """
+        Initializes the dataset with financial time-series data.
+
+        :param data: Pandas DataFrame containing the financial data. Columns should be ordered 
+                     as features for each asset, repeating for each asset.
+        :param lookback_window: 50. The number of historical days to include in each sample.
+        :param num_assets: Number of assets. set to 4.
+        :param num_features: Number of features per asset. set to 2. prices and return
+        :param transform: Optional transform to be applied to each sample.
+        """
         self.data = data
         self.lookback_window = lookback_window
-        
+        self.num_assets = num_assets
+        self.num_features = num_features  
+        self.transform = transform
     def __len__(self):
-        #length of dataset
-        return len(self.data) - self.lookback_window
+        
+        # Ensuring we have enough data for at least one lookback window
+        return len(self.data) - self.lookback_window + 1
     
     def __getitem__(self, idx):
-        #retrieves a single sample from the dataset
+        
+        
         start_idx = idx
         end_idx = idx + self.lookback_window
+        x = self.data.iloc[start_idx:end_idx, :].values  
+        x_tensor = torch.tensor(x, dtype=torch.float32)
+
+        # Reshape x to have shape (lookback_window, num_assets, num_features)
+        x_tensor = x_tensor.view(self.lookback_window, self.num_assets, self.num_features)
+        if self.transform is not None:
+            x_tensor = self.transform(x_tensor)
         
-        input_data = self.data.iloc[start_idx:end_idx]
-        input_data = self.preprocess_data(input_data)
-        
-        return torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
-    
-    def preprocess_data(self, data):
-        preprocessed_data = np.concatenate([data.values[1:], data.pct_change().values[1:]], axis=1)
-        return preprocessed_data
+        #add label y to document start-end dat of each xt
+        y = torch.tensor([start_idx, end_idx - 1], dtype=torch.long)
 
-def load_data(csv_file):
-    data = pd.read_csv(csv_file, index_col=0, parse_dates=True)
-    return data
+        return x_tensor, y
 
-def create_datasets_and_loaders(data, train_start_date, train_end_date, test_start_date, test_end_date, lookback_window=50, batch_size=64):
-    train_data = data[(data.index >= train_start_date) & (data.index <= train_end_date)]
-    test_data = data[(data.index >= test_start_date) & (data.index <= test_end_date)]
-    
-    train_dataset = PortfolioDataset(train_data, lookback_window)
-    test_dataset = PortfolioDataset(test_data, lookback_window)
-    
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    
-    return train_dataset, test_dataset, train_loader, test_loader
-
-
-#get data for source/file
-
-csv_file = 'CSV_file'
-data = load_data(csv_file)
-
+#Data set and Data loader
+tickers = "VTI AGG DBC VIX"
 train_start_date = '2009-01-01'
-train_end_date = '2013-12-31'
-test_start_date = '2014-01-01'
-test_end_date = '2024-03-15'
+train_end_date = '2023-12-31'
+validation_start_date = '2018-01-01'
+validation_end_date = '2023-12-31'
 
-train_dataset, test_dataset, train_loader, test_loader = create_datasets_and_loaders(
-    data, train_start_date, train_end_date, test_start_date, test_end_date, lookback_window=50, batch_size=32
-)
+data_train = get_data(tickers, train_start_date, train_end_date)
+data_val = get_data(tickers, validation_start_date, validation_end_date)
 
-# Create an instance of the ConvNet model
-model = ConvNet(input_channels=50, hidden_channels=16, output_dim=4)
+identity_transform = IdentityTransform()
+train_dataset = PortfolioDataset(data_train, lookback_window=50, num_assets=4, num_features=2, transform=identity_transform)
+val_dataset = PortfolioDataset(data_val, lookback_window=50, num_assets=4, num_features=2, transform=identity_transform)
 
-# Define the optimizer and loss function
-optimizer = torch.optim.Adam(model.parameters())
-criterion = sharp_loss
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False)
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-# Training loop
-num_epochs = 150
-for epoch in range(num_epochs):
-    for batch in train_loader:
-        # Forward pass
-        outputs = model(batch)
-        
-        # Compute loss
-        loss = criterion(outputs, data.values, train_dataset.lookback_window)
-        
-        # Backward pass and optimization
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    
-    # Print the loss for every 10 epochs
-    if (epoch + 1) % 10 == 0:
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
-# Generate portfolio allocations for the test data
-portfolio_allocations = []
-with torch.no_grad():
-    for batch in test_loader:
-        allocations = model(batch)
-        portfolio_allocations.extend(allocations.numpy())
 
-# Calculate portfolio returns
-portfolio_returns = []
-for i in range(len(test_dataset)):
-    allocations = portfolio_allocations[i]
-    asset_returns = test_dataset.data.iloc[i + test_dataset.lookback_window].filter(like='Return').values
-    portfolio_return = np.sum(allocations * asset_returns)
-    portfolio_returns.append(portfolio_return)
-
-# Aggregate portfolio returns by year
-yearly_returns = {}
-for date, returns in zip(test_dataset.data.index[test_dataset.lookback_window:], portfolio_returns):
-    year = date.year
-    if year not in yearly_returns:
-        yearly_returns[year] = []
-    yearly_returns[year].append(returns)
-
-avg_yearly_returns = {year: np.mean(returns) for year, returns in yearly_returns.items()}
-
-# Plot the yearly portfolio returns
-years = list(avg_yearly_returns.keys())
-returns = list(avg_yearly_returns.values())
-
-plt.figure(figsize=(10, 6))
-plt.bar(years, returns)
-plt.xlabel('Year')
-plt.ylabel('Average Portfolio Return')
-plt.title('Yearly Portfolio Returns')
-plt.xticks(years)
-plt.show()
+#run model
+num_epochs=150
+trained_model = train(train_loader, val_loader, model, num_epochs, lr, print_freq)
