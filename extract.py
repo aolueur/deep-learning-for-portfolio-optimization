@@ -14,8 +14,12 @@ def get_data(tickers, start_date, end_date):
     Returns:
     - DataFrame: A pandas DataFrame with adjusted close prices and calculated returns for the specified tickers.
     """
-    tickers_list = tickers.split()  # Assumes tickers are passed as a space-separated string
-    adj_close = yf.download(' '.join(tickers_list), start=start_date, end=end_date)['Adj Close'].dropna()
+    tickers_list = (
+        tickers.split()
+    )  # Assumes tickers are passed as a space-separated string
+    adj_close = yf.download(
+        ' '.join(tickers_list), start=start_date, end=end_date
+    )['Adj Close'].dropna()
 
     # Create a new DataFrame to store prices and returns
     structured_data = pd.DataFrame()
@@ -23,7 +27,7 @@ def get_data(tickers, start_date, end_date):
     for ticker in tickers_list:
         # Add price column
         structured_data[f'{ticker}_Price'] = adj_close[ticker]
-        
+
         # Calculate and add return column immediately after price column
         structured_data[f'{ticker}_Return'] = adj_close[ticker].pct_change()
 

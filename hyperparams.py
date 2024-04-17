@@ -1,0 +1,5 @@
+tickers = 'VTI AGG DBC VIX'
+train_start_date = '2009-01-01'
+train_end_date = '2023-12-31'
+validation_start_date = '2018-01-01'
+validation_end_date = '2023-12-31'
