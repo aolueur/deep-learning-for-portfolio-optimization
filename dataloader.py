@@ -17,6 +17,7 @@ logging.basicConfig(format="%(asctime)s-%(message)s",
 
 
 # placeholder
+
 class IdentityTransform(nn.Module):
     def __init__(self):
         super(IdentityTransform, self).__init__()
@@ -80,6 +81,13 @@ class PortfolioDataset(Dataset):
 data_train = get_data(tickers, train_start_date, train_end_date)
 data_val = get_data(tickers, validation_start_date, validation_end_date)
 
+# normalize all columns in data_train and data_val
+train_min = data_train.min()
+train_max = data_train.max()
+data_train = (data_train - train_min) / (train_max - train_min)
+data_val = (data_val - train_min) / (train_max - train_min)
+
+
 identity_transform = IdentityTransform()
 train_dataset = PortfolioDataset(
     data_train,
@@ -103,4 +111,4 @@ val_loader = DataLoader(val_dataset, batch_size=32,
 
 
 if __name__ == '__main__':
-    print(data_train.isnull().values.any())
+    print(data_train)

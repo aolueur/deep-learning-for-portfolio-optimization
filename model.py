@@ -24,12 +24,15 @@ class ConvNet(nn.Module):
     def __init__(self, input_channels=50, hidden_channels=16, output_dim=4):
         super(ConvNet, self).__init__()
         self.conv1 = nn.Conv2d(
-            in_channels=input_channels, out_channels=hidden_channels, kernel_size=2, padding=1
+            in_channels=input_channels, out_channels=hidden_channels, kernel_size=2, padding=2
         )
         self.conv2 = nn.Conv2d(
+            in_channels=hidden_channels, out_channels=hidden_channels, kernel_size=2, padding=2
+        )
+        self.conv3 = nn.Conv2d(
             in_channels=hidden_channels, out_channels=hidden_channels, kernel_size=2, padding=1
         )
-        self.linear1 = nn.LazyLinear(64)
+        self.linear1 = nn.Linear(96, 64)
         self.linear2 = nn.Linear(64, output_dim)
         self.softmax = nn.Softmax(dim=1)
 
@@ -37,7 +40,8 @@ class ConvNet(nn.Module):
         """
         Forward propagation
         """
-        c1 = F.relu(self.conv1(x))
+        c0 = self.conv1(x)
+        c1 = F.relu(c0)
         s1 = F.max_pool2d(c1, (2, 2))
         c2 = F.relu(self.conv2(s1))
         s2 = F.max_pool2d(c2, 2)
@@ -67,8 +71,8 @@ class SharpLoss(nn.Module):
         logging.debug(f"v: {v}")
         for i in range(batch_size):
             v[i] = torch.dot(weights[i], prices[i])
-            logging.debug(f"v: {v}")
-        returns = v[1:] / v[:-1] - 1
+        logging.debug(f"v: {v}")
+        returns = v[1:] / (v[:-1] + 1e-3) - 1
         logging.debug(f"returns: {returns}")
         loss = torch.mean(returns) / torch.std(returns)
         return -loss
