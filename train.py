@@ -72,4 +72,12 @@ def train(
 
 model = ConvNet(input_channels, hidden_channels, output_dim=4)
 
-train(train_loader, val_loader, model, num_epochs, lr, print_freq)
+model = train(train_loader, val_loader, model, num_epochs, lr, print_freq)
+
+# Save the model
+torch.save(model.state_dict(), "model.pth")
+
+
+# Load the model
+# model = ConvNet(input_channels, hidden_channels, output_dim=4)
+# model.load_state_dict(torch.load("model.pth"))
