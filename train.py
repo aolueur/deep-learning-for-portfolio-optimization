@@ -1,10 +1,13 @@
 import torch
-from dataloader import train_loader, val_loader
+from hyperparams import *
+from dataloader import PortfolioDataset, IdentityTransform
+from extract import get_data
 from model import ConvNet, SharpLoss
 import logging
 from tqdm import tqdm
 from hyperparams import num_epochs, lr, print_freq, input_channels, hidden_channels
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
 
 logging.basicConfig(format="%(asctime)s-%(message)s",
                     level=logging.INFO, datefmt="%H:%M:%S")
@@ -70,12 +73,44 @@ def train(
     return model
 
 
-model = ConvNet(input_channels, hidden_channels, output_dim=4)
+if __name__ == '__main__':
+    # Prepare data
+    data_train = get_data(tickers, train_start_date, train_end_date)
+    data_val = get_data(tickers, validation_start_date, validation_end_date)
 
-model = train(train_loader, val_loader, model, num_epochs, lr, print_freq)
+    # normalize all columns in data_train and data_val
+    train_min = data_train.min()
+    train_max = data_train.max()
+    data_train = (data_train - train_min) / (train_max - train_min)
+    data_val = (data_val - train_min) / (train_max - train_min)
 
-# Save the model
-torch.save(model.state_dict(), "model.pth")
+    identity_transform = IdentityTransform()
+
+    # Create dataloaders
+    train_dataset = PortfolioDataset(
+        data_train,
+        lookback_window=50,
+        num_assets=4,
+        num_features=2,
+        transform=identity_transform,
+    )
+    val_dataset = PortfolioDataset(
+        data_val,
+        lookback_window=50,
+        num_assets=4,
+        num_features=2,
+        transform=identity_transform,
+    )
+    train_loader = DataLoader(train_dataset, batch_size=32,
+                              shuffle=False, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=32,
+                            shuffle=False, drop_last=True)
+
+    model = ConvNet(input_channels, hidden_channels, output_dim=4)
+    model = train(train_loader, val_loader, model, num_epochs, lr, print_freq)
+
+    # Save the model
+    torch.save(model.state_dict(), "model.pth")
 
 
 # Load the model

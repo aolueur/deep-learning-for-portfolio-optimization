@@ -14,6 +14,7 @@ def get_data(tickers, start_date, end_date):
     Returns:
     - DataFrame: A pandas DataFrame with adjusted close prices and calculated returns for the specified tickers.
     """
+    print(f"Fetching data for {tickers} from {start_date} to {end_date}...")
     tickers_list = (
         tickers.split()
     )  # Assumes tickers are passed as a space-separated string
