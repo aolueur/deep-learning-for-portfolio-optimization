@@ -72,10 +72,12 @@ class SharpLoss(nn.Module):
         for i in range(batch_size):
             v[i] = torch.dot(weights[i], prices[i])
         logging.debug(f"v: {v}")
-        returns = v[1:] / (v[:-1] + 1e-3) - 1
-        logging.debug(f"returns: {returns}")
-        loss = torch.mean(returns) / torch.std(returns)
-        return -loss
+        returns = v[1:] / (v[:-1] + 1e-7) - 1
+        annualized_mean_return = (
+            1 + returns).prod() ** (252 / len(returns)) - 1
+        annualized_std_dev = returns.std() * (252 ** 0.5)
+        sharp_ratio = annualized_mean_return / annualized_std_dev
+        return -sharp_ratio
 
 
 if __name__ == '__main__':

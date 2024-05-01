@@ -35,7 +35,8 @@ def calculate_sharpe_ratio(portfolio_returns, risk_free_rate=0):
     Returns:
     - float: The Sharpe ratio of the portfolio.
     """
-    mean_return = portfolio_returns.mean()
-    std_dev = portfolio_returns.std()
+    mean_return = (1 + portfolio_returns).prod() ** (252 /
+                                                     len(portfolio_returns)) - 1
+    std_dev = portfolio_returns.std() * (252 ** 0.5)
     baseline_SR = (mean_return - risk_free_rate) / std_dev
     return baseline_SR

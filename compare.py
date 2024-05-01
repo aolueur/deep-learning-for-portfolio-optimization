@@ -3,7 +3,7 @@ from model import ConvNet
 import torch
 from baseline import calculate_portfolio_returns, calculate_sharpe_ratio
 from extract import get_data
-from dataloader import PortfolioDataset, IdentityTransform
+from dataloader import PortfolioDataset, IdentityTransform, train_max, train_min
 from torch.utils.data import DataLoader
 from model import SharpLoss
 
@@ -18,7 +18,7 @@ end_date = '2023-12-31'
 
 # Load the data
 test_data = get_data(tickers, start_date, end_date)
-
+test_data_normalized = (test_data) / (train_max)
 # Evaluate the CNN model on the test set
 test_dataset = PortfolioDataset(
     test_data,
@@ -28,15 +28,27 @@ test_dataset = PortfolioDataset(
     transform=identity_transform,
 )
 
+test_dataset_normalized = PortfolioDataset(
+    test_data_normalized,
+    lookback_window=50,
+    num_assets=4,
+    num_features=2,
+    transform=identity_transform,
+)
+
+test_loader_normalized = DataLoader(
+    test_dataset_normalized, batch_size=len(test_dataset), shuffle=False)
 test_loader = DataLoader(
     test_dataset, batch_size=len(test_dataset), shuffle=False)
 sharp_loss = SharpLoss()
 
+
 model.eval()
 
+X_normalized, y_normalized = next(iter(test_loader_normalized))
 X, y = next(iter(test_loader))
 with torch.no_grad():
-    y_pred = model(X)
+    y_pred = model(X_normalized)
     conv_loss = sharp_loss(y_pred, y)
 
 conv_sharpe = -conv_loss.item()

@@ -76,3 +76,16 @@ class PortfolioDataset(Dataset):
         y = x_tensor[-1, :, 0]
 
         return x_tensor, y
+
+
+data_train = get_data(tickers, train_start_date, train_end_date)
+data_val = get_data(tickers, validation_start_date, validation_end_date)
+
+# normalize all columns in data_train and data_val
+train_min = data_train.min()
+train_max = data_train.max()
+
+logging.debug(f"Train min: {train_min}")
+logging.debug(f"Train max: {train_max}")
+data_train_normalized = (data_train) / (train_max)
+data_val_normalized = (data_val) / (train_max)

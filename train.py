@@ -1,6 +1,6 @@
 import torch
 from hyperparams import *
-from dataloader import PortfolioDataset, IdentityTransform
+from dataloader import PortfolioDataset, IdentityTransform, data_train_normalized, data_val_normalized
 from extract import get_data
 from model import ConvNet, SharpLoss
 import logging
@@ -26,7 +26,7 @@ def train(
     """
 
     logging.info("Start training...")
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-3)
     lossfn = SharpLoss()
     train_losses = []
     val_losses = []
@@ -68,34 +68,24 @@ def train(
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
     ax.legend()
-    plt.show()
+    plt.savefig("learning_curve.png", dpi=300)
 
     return model
 
 
 if __name__ == '__main__':
-    # Prepare data
-    data_train = get_data(tickers, train_start_date, train_end_date)
-    data_val = get_data(tickers, validation_start_date, validation_end_date)
-
-    # normalize all columns in data_train and data_val
-    train_min = data_train.min()
-    train_max = data_train.max()
-    data_train = (data_train - train_min) / (train_max - train_min)
-    data_val = (data_val - train_min) / (train_max - train_min)
-
     identity_transform = IdentityTransform()
 
     # Create dataloaders
     train_dataset = PortfolioDataset(
-        data_train,
+        data_train_normalized,
         lookback_window=50,
         num_assets=4,
         num_features=2,
         transform=identity_transform,
     )
     val_dataset = PortfolioDataset(
-        data_val,
+        data_val_normalized,
         lookback_window=50,
         num_assets=4,
         num_features=2,
