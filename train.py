@@ -19,7 +19,7 @@ torch.autograd.set_detect_anomaly(True)
 
 
 def train(
-    train_loader, val_loader, model, num_epochs=10, lr=1e-1, print_freq=100
+    train_loader, val_loader, model, num_epochs=10, lr=1e-2, print_freq=100
 ):
     """
     Model training loop
